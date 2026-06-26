@@ -5,16 +5,11 @@
 <%= link_to "New recipe", new_recipe_path %>
 
 <% if @recipes.any? %>
-  <ul>
+  <div id="recipes">
     <% @recipes.each do |recipe| %>
-      <li>
-        <%= link_to recipe.title, recipe %>
-        <% if recipe.photo.attached? %>
-          <%= image_tag recipe.photo, alt: recipe.title, width: 80 %>
-        <% end %>
-      </li>
+      <%= render recipe %>
     <% end %>
-  </ul>
+  </div>
 <% else %>
   <p>No recipes yet.</p>
 <% end %>

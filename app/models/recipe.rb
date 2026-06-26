@@ -4,7 +4,8 @@ class Recipe < ApplicationRecord
   has_one_attached :photo
 
   validates :title, presence: true
-  validates :prep_time, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :servings, numericality: { greater_than: 0 }, allow_nil: true
+  validates :prep_time, numericality: { greater_than: 0 }, allow_nil: true
   validate :photo_must_be_an_allowed_image
 
   private
