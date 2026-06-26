@@ -1,0 +1,15 @@
+<% content_for :title, "Recipes" %>
+
+<h1>Recipes</h1>
+
+<%= link_to "New recipe", new_recipe_path %>
+
+<% if @recipes.any? %>
+  <div id="recipes">
+    <% @recipes.each do |recipe| %>
+      <%= render recipe %>
+    <% end %>
+  </div>
+<% else %>
+  <p>No recipes yet.</p>
+<% end %>

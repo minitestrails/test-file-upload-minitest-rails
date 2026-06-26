@@ -17,17 +17,24 @@ cd test-file-upload-minitest-rails
 bin/setup --skip-server
 ```
 
-The full file-upload example (`Recipe` model with `has_one_attached :photo`, the create form, and the tests) lives on the `test-file-upload` branch in [PR #4](https://github.com/minitestrails/test-file-upload-minitest-rails/pull/4):
-
-```bash
-git checkout test-file-upload
-```
-
 Start the server:
 
 ```bash
 bin/rails server
 ```
+
+Visit [http://localhost:3000](http://localhost:3000) to browse recipes and upload photos on create/edit.
+
+## App structure
+
+| Piece | Notes |
+|-------|-------|
+| `Recipe` | `title` (required), `description`, `servings`, `prep_time` (rejects negatives) |
+| `has_one_attached :photo` | JPEG/PNG only; multipart form on new/edit |
+| Active Storage | `:local` in development, `:test` in test (`tmp/storage`) |
+| `test/fixtures/files/sample.png` | Committed fixture file for upload tests |
+
+Upload tests from the blog post land on the `test-file-upload` branch in [PR #4](https://github.com/minitestrails/test-file-upload-minitest-rails/pull/4).
 
 ## What this app demonstrates
 
@@ -44,7 +51,7 @@ Most confidence comes from **model + integration** tests. System tests are reser
 ## How it works
 
 - The test environment uses Active Storage's `:test` service, which writes to `tmp/storage` (see `config/storage.yml` and `config/environments/test.rb`). No AWS or GCS credentials are needed in CI.
-- Sample upload files live in `test/fixtures/files/` (e.g. `sample.jpg`) and are committed so CI can run the suite.
+- Sample upload files live in `test/fixtures/files/` (e.g. `sample.png`) and are committed so CI can run the suite.
 - Model tests attach files with `file_fixture` + `attach`, then assert `attached?`, filename, and content type.
 - Integration tests post a multipart form with `file_fixture_upload`, then assert the redirect and the attachment on the record.
 - Files uploaded during integration and system tests are cleaned up in an `after_teardown` callback, since Active Storage does not purge them automatically on rollback.
@@ -54,6 +61,9 @@ Most confidence comes from **model + integration** tests. System tests are reser
 ```bash
 # Full suite
 bin/rails test
+
+# Full suite (with system tests)
+bin/rails test:all
 
 # Model tests only
 bin/rails test test/models/

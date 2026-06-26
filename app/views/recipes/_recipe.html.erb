@@ -1,0 +1,37 @@
+<div id="<%= dom_id recipe %>">
+  <div>
+    <strong>Title:</strong>
+    <%= recipe.title %>
+  </div>
+
+  <% if recipe.photo.attached? %>
+    <div>
+      <%= image_tag recipe.photo, alt: recipe.title, width: 80 %>
+    </div>
+  <% end %>
+
+  <% if recipe.description.present? %>
+    <div>
+      <strong>Description:</strong>
+      <%= recipe.description %>
+    </div>
+  <% end %>
+
+  <% if recipe.prep_time.present? %>
+    <div>
+      <strong>Prep time:</strong>
+      <%= recipe.prep_time %>
+    </div>
+  <% end %>
+
+  <% if recipe.servings.present? %>
+    <div>
+      <strong>Servings:</strong>
+      <%= recipe.servings %>
+    </div>
+  <% end %>
+
+  <p>
+    <%= link_to "Show", recipe %>
+  </p>
+</div>
