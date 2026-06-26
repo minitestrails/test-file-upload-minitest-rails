@@ -63,4 +63,44 @@ class RecipesIntegrationTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "Pancakes", recipe.reload.title
   end
+
+  test "creates a recipe with a photo" do
+    assert_difference("Recipe.count", 1) do
+      post recipes_path, params: {
+        recipe: {
+          title: "Pancakes with photo",
+          photo: sample_photo_upload
+        }
+      }
+    end
+
+    recipe = Recipe.last
+    assert_redirected_to recipe_path(recipe)
+    follow_redirect!
+    assert_response :success
+
+    assert recipe.photo.attached?
+    assert_equal "sample.jpg", recipe.photo.filename.to_s
+  end
+
+  test "updates a recipe's photo" do
+    recipe = recipes(:lentil_soup)
+    recipe.photo.attach(
+      io: file_fixture("sample.jpg").open,
+      filename: "old.jpg",
+      content_type: "image/jpeg"
+    )
+    original_blob_id = recipe.photo.blob.id
+
+    patch recipe_path(recipe), params: {
+      recipe: { photo: sample_photo_upload }
+    }
+
+    assert_redirected_to recipe_path(recipe)
+    recipe.reload
+
+    assert recipe.photo.attached?
+    assert_equal "sample.jpg", recipe.photo.filename.to_s
+    assert_not_equal original_blob_id, recipe.photo.blob.id
+  end
 end

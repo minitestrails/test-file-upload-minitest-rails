@@ -1,0 +1,2 @@
+# test/fixtures/active_storage/blobs.yml
+pancakes_photo_blob: <%= ActiveStorage::FixtureSet.blob filename: "sample.jpg", service_name: "test_fixtures" %>
