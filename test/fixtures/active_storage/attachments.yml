@@ -1,0 +1,4 @@
+pancakes_with_photo:
+  name: photo
+  record: pancakes (Recipe)
+  blob: pancakes_photo_blob
