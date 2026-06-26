@@ -1,0 +1,26 @@
+<% content_for :title, @recipe.title %>
+
+<h1><%= @recipe.title %></h1>
+
+<% if @recipe.photo.attached? %>
+  <%= image_tag @recipe.photo, alt: @recipe.title, width: 320 %>
+<% end %>
+
+<% if @recipe.description.present? %>
+  <p><%= @recipe.description %></p>
+<% end %>
+
+<dl>
+  <% if @recipe.servings.present? %>
+    <dt>Servings</dt>
+    <dd><%= @recipe.servings %></dd>
+  <% end %>
+  <% if @recipe.prep_time.present? %>
+    <dt>Prep time</dt>
+    <dd><%= @recipe.prep_time %> minutes</dd>
+  <% end %>
+</dl>
+
+<%= link_to "Edit", edit_recipe_path(@recipe) %>
+<%= link_to "Back", recipes_path %>
+<%= button_to "Destroy", @recipe, method: :delete, data: { turbo_confirm: "Are you sure?" } %>

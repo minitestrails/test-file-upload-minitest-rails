@@ -1,0 +1,20 @@
+<% content_for :title, "Recipes" %>
+
+<h1>Recipes</h1>
+
+<%= link_to "New recipe", new_recipe_path %>
+
+<% if @recipes.any? %>
+  <ul>
+    <% @recipes.each do |recipe| %>
+      <li>
+        <%= link_to recipe.title, recipe %>
+        <% if recipe.photo.attached? %>
+          <%= image_tag recipe.photo, alt: recipe.title, width: 80 %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p>No recipes yet.</p>
+<% end %>
