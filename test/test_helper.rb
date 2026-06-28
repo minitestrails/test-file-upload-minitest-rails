@@ -14,5 +14,24 @@ module ActiveSupport
 
     # Add more helper methods to be used by all tests here...
     include UploadTestHelper
+
+    parallelize_teardown do |i|
+      FileUtils.rm_rf(ActiveStorage::Blob.services.fetch(:test_fixtures).root)
+    end
   end
+end
+
+class ActionDispatch::IntegrationTest
+  def after_teardown
+    super
+    FileUtils.rm_rf(ActiveStorage::Blob.service.root)
+  end
+
+  parallelize_setup do |i|
+    ActiveStorage::Blob.service.root = "#{ActiveStorage::Blob.service.root}-#{i}"
+  end
+end
+
+Minitest.after_run do
+  FileUtils.rm_rf(ActiveStorage::Blob.services.fetch(:test_fixtures).root)
 end
