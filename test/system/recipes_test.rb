@@ -36,4 +36,14 @@ class RecipesTest < ApplicationSystemTestCase
     end
     assert_no_text recipe.title
   end
+
+  test "visitor uploads a photo on create" do
+    visit new_recipe_path
+    fill_in "Title", with: "Brownie with photo"
+    attach_file "Photo", Rails.root.join("test/fixtures/files/sample.jpg")
+    click_on "Create Recipe"
+
+    assert_text "Brownie with photo"
+    assert Recipe.last.photo.attached?
+  end
 end

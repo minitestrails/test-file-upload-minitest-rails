@@ -1,6 +1,6 @@
 # Sample app for testing file uploads with Minitest Rails
 
-Sample Rails app for a [blog post](https://minitestrails.com/blog/testing-file-uploads-rails-minitest) on testing [Active Storage](https://guides.rubyonrails.org/active_storage_overview.html) file uploads with Minitest. It demonstrates how to test uploads across model, integration, and (optional) system layers without hitting S3 or any cloud storage in CI.
+Sample Rails app for a [blog post](https://minitestrails.com/blog/testing-file-uploads-rails-minitest) on testing [Active Storage](https://guides.rubyonrails.org/active_storage_overview.html) file uploads with Minitest. It demonstrates how to test uploads across model, integration, and system layers without hitting S3 or any cloud storage in CI.
 
 ## Prerequisites
 
@@ -8,6 +8,7 @@ Sample Rails app for a [blog post](https://minitestrails.com/blog/testing-file-u
 - Rails 8.1.3
 - Minitest 6.0.6
 - SQLite (default Rails 8 database)
+- Chrome or Chromium (system tests only)
 
 ## Local setup
 
@@ -29,50 +30,105 @@ Visit [http://localhost:3000](http://localhost:3000) to browse recipes and uploa
 
 | Piece | Notes |
 |-------|-------|
-| `Recipe` | `title` (required), `description`, `servings`, `prep_time` (rejects negatives) |
+| `Recipe` | `title` (required), `description`, `servings`, `prep_time` (positive if present) |
 | `has_one_attached :photo` | JPEG/PNG only; multipart form on new/edit |
 | Active Storage | `:local` in development, `:test` in test (`tmp/storage`) |
-| `test/fixtures/files/sample.png` | Committed fixture file for upload tests |
+| `test_fixtures` service | Separate disk root for fixture attachments (`tmp/storage_fixtures`) |
+| `test/fixtures/files/sample.jpg` | Committed JPEG for upload tests |
+| `test/fixtures/files/sample.txt` | Used to assert disallowed content types |
+| `test/support/upload_test_helper.rb` | `sample_photo_upload` wraps `file_fixture_upload` |
 
-Upload tests from the blog post land on the `test-file-upload` branch in [PR #4](https://github.com/minitestrails/test-file-upload-minitest-rails/pull/4).
+For the bare-minimum Recipe app without uploads, see [`docs/recipe-app-setup.md`](docs/recipe-app-setup.md).
 
-## What this app demonstrates
+## Tests
 
-File upload testing splits cleanly by layer. The blog post and this app cover each one:
+The suite exercises file uploads **without cloud storage**. Active Storage's `:test` service writes to disk under `tmp/storage`. No AWS or GCS credentials are needed in CI.
 
-| Test type | Good for |
-|-----------|----------|
-| Model | Validations on type/size, `attach`/`purge` on the model |
-| Integration | Multipart POST through the controller, redirect, DB + attachment |
-| System | Optional: a real file input in the browser (smoke only) |
+See the [blog post](https://minitestrails.com/blog/testing-file-uploads-rails-minitest) for the full walkthrough. This repo is the companion sample app.
 
-Most confidence comes from **model + integration** tests. System tests are reserved for one happy-path smoke check.
+### Setup
 
-## How it works
+`config/environments/test.rb` points Active Storage at the `:test` service:
 
-- The test environment uses Active Storage's `:test` service, which writes to `tmp/storage` (see `config/storage.yml` and `config/environments/test.rb`). No AWS or GCS credentials are needed in CI.
-- Sample upload files live in `test/fixtures/files/` (e.g. `sample.png`) and are committed so CI can run the suite.
-- Model tests attach files with `file_fixture` + `attach`, then assert `attached?`, filename, and content type.
-- Integration tests post a multipart form with `file_fixture_upload`, then assert the redirect and the attachment on the record.
-- Files uploaded during integration and system tests are cleaned up in an `after_teardown` callback, since Active Storage does not purge them automatically on rollback.
+```ruby
+config.active_storage.service = :test
+```
 
-## Run tests
+`config/storage.yml` defines a separate `test_fixtures` service so fixture attachments stay apart from files uploaded during a test:
+
+```yaml
+test_fixtures:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage_fixtures") %>
+```
+
+`test/test_helper.rb` loads support files and includes `UploadTestHelper`:
+
+```ruby
+Dir[Rails.root.join("test/support/**/*.rb")].sort.each { |f| require f }
+
+module ActiveSupport
+  class TestCase
+    include UploadTestHelper
+  end
+end
+```
+
+Active Storage fixture attachments preload a photo on `recipes(:pancakes)`:
+
+```yaml
+# test/fixtures/active_storage/attachments.yml
+pancakes_with_photo:
+  name: photo
+  record: pancakes (Recipe)
+  blob: pancakes_photo_blob
+```
+
+```yaml
+# test/fixtures/active_storage/blobs.yml
+pancakes_photo_blob: <%= ActiveStorage::FixtureSet.blob filename: "sample.jpg", service_name: "test_fixtures" %>
+```
+
+### What is covered
+
+| File | What it proves |
+|------|----------------|
+| `test/models/recipe_test.rb` | Title/servings/prep_time validations; attach with `file_fixture`; rejects disallowed content type; pancakes fixture has a preloaded photo |
+| `test/integration/recipes_integration_test.rb` | Recipe CRUD over HTTP; multipart create with `file_fixture_upload`; photo replace on update |
+| `test/system/recipes_test.rb` | Browser smoke for list, show, create, update, destroy; `attach_file` on create |
+
+Most confidence comes from **model + integration** tests. The system test adds one happy-path upload smoke with a real file input.
+
+### Run tests
 
 ```bash
-# Full suite
+# Model + integration
 bin/rails test
 
-# Full suite (with system tests)
+# Everything including system tests (requires Chrome)
 bin/rails test:all
 
-# Model tests only
+# By layer
 bin/rails test test/models/
-
-# Integration tests only
 bin/rails test test/integration/
-
-# Optional system smoke test (requires Chrome)
 bin/rails test:system
 ```
 
-See the [blog post](https://minitestrails.com/blog/testing-file-uploads-rails-minitest) for the full walkthrough. This repo is the companion sample app.
+## What this app demonstrates
+
+File upload testing splits cleanly by layer:
+
+| Test type | Good for |
+|-----------|----------|
+| Model | Validations on type, `attach`/`purge` on the model, fixture preloads |
+| Integration | Multipart POST through the controller, redirect, DB + attachment |
+| System | Optional: file input in a real browser (smoke only) |
+
+Patterns used in this repo:
+
+- **Model:** `file_fixture("sample.jpg")` + `attach`, then assert `attached?`, filename, and content type
+- **Integration:** `file_fixture_upload` (via `sample_photo_upload`) in a multipart POST, then assert redirect and attachment on the record
+- **Fixtures:** Active Storage YAML fixtures for records that already have a photo before the test runs
+- **System:** Capybara `attach_file` for one browser smoke
+
+Direct uploads to S3 and virus-scan callbacks are out of scope. Test the server-side attach path first.

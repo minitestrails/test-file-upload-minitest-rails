@@ -37,4 +37,40 @@ class RecipeTest < ActiveSupport::TestCase
 
     assert recipe.valid?
   end
+
+  test "attaches a photo" do
+    recipe = recipes(:pancakes)
+    file = file_fixture("sample.jpg")
+
+    recipe.photo.attach(
+      io: File.open(file),
+      filename: "sample.jpg",
+      content_type: "image/jpeg"
+    )
+
+    assert recipe.photo.attached?
+    assert_equal "sample.jpg", recipe.photo.filename.to_s
+    assert_equal "image/jpeg", recipe.photo.content_type
+  end
+
+  test "rejects a invalid content type" do
+    recipe = Recipe.new(title: "Bad upload")
+    file = file_fixture("sample.txt")
+
+    recipe.photo.attach(
+      io: File.open(file),
+      filename: "sample.txt",
+      content_type: "text/plain"
+    )
+
+    assert_not recipe.valid?
+    assert_includes recipe.errors[:photo], "must be a JPEG or PNG"
+  end
+
+  test "pancakes fixture has a photo" do
+    photo = recipes(:pancakes).photo
+
+    assert photo.attached?
+    assert_not_nil photo.download
+  end
 end
